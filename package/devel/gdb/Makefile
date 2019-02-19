@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2006-2015 OpenWrt.org
+# Copyright (C) 2006-2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,23 +8,24 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=gdb
-PKG_VERSION:=7.10
+PKG_VERSION:=8.0.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@GNU/gdb
-PKG_MD5SUM:=2a35bac41fa8e10bf04f3a0dd7f7f363
+PKG_HASH:=3dbd5f93e36ba2815ad0efab030dcd0c7b211d7b353a40a53f4c02d7d56295e3
 
 PKG_BUILD_PARALLEL:=1
 PKG_INSTALL:=1
 PKG_LICENSE:=GPL-3.0+
+PKG_CPE_ID:=cpe:/a:gnu:gdb
 
 include $(INCLUDE_DIR)/package.mk
 
 define Package/gdb/Default
   SECTION:=devel
   CATEGORY:=Development
-  DEPENDS:=+!USE_MUSL:libthread-db +PACKAGE_zlib:zlib @!TARGET_mipselsf
+  DEPENDS:=+!USE_MUSL:libthread-db +PACKAGE_zlib:zlib @!LINUX_2_6_22
   URL:=http://www.gnu.org/software/gdb/
 endef
 
@@ -43,6 +44,7 @@ endef
 define Package/gdbserver
 $(call Package/gdb/Default)
   TITLE:=Remote server for GNU Debugger
+  DEPENDS+=+libstdcpp
 endef
 
 define Package/gdbserver/description
@@ -55,20 +57,16 @@ CONFIGURE_ARGS+= \
 	--with-system-readline \
 	--without-expat \
 	--without-lzma \
+	--disable-sim \
 	--disable-werror
 
 CONFIGURE_VARS+= \
 	ac_cv_search_tgetent="$(TARGET_LDFLAGS) -lncurses -lreadline"
 
-
-
-# if binutils 2.4 are compiled before gdb - then ansidecl.h in opt/include (from binutils) will make compilation fail
-# no -I or iquote options helped. So we rename the file before compilation and rename back after
-
 define Build/Compile
 	+$(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) \
 		DESTDIR="$(PKG_INSTALL_DIR)" \
-		CPPFLAGS="-iquote $(PKG_BUILD_DIR)/include $(TARGET_CPPFLAGS)" \
+		CPPFLAGS="$(TARGET_CPPFLAGS)" \
 		all
 endef
 

@@ -8,13 +8,11 @@
 					[ "load-firmware", "/lib/firmware" ],
 					[ "return" ]
 				]
-			],
-		],
-	}, ],
+			]
+		]
+	} ],
 	[ "if",
-		[ "and",
-			[ "eq", "SUBSYSTEM", "button" ],
-		],
+		[ "eq", "SUBSYSTEM", "button" ],
 		[ "exec", "/etc/rc.button/failsafe" ]
-	],
+	]
 ]

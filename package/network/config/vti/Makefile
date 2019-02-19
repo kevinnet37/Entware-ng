@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=vti
 PKG_VERSION:=1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 PKG_LICENSE:=GPL-2.0
 
 include $(INCLUDE_DIR)/package.mk
@@ -32,7 +32,7 @@ endef
 define Package/vtiv4
 $(call Package/vti/Default)
   TITLE:=Virtual IPsec Tunnel Interface (IPv4) config support
-  DEPENDS:=@(PACKAGE_vti) +kmod-ip_vti
+  DEPENDS:=@(PACKAGE_vti) +kmod-ip-vti
 endef
 
 define Package/vtiv4/description
@@ -42,7 +42,7 @@ endef
 define Package/vtiv6
 $(call Package/vti/Default)
   TITLE:=Virtual IPsec Tunnel Interface (IPv6) config support
-  DEPENDS:=@(PACKAGE_vti) @IPV6 +kmod-ip6_vti
+  DEPENDS:=@(PACKAGE_vti) @IPV6 +kmod-ip6-vti
 endef
 
 define Package/vtiv6/description
@@ -58,6 +58,14 @@ endef
 define Package/vti/install
 	$(INSTALL_DIR) $(1)/lib/netifd/proto
 	$(INSTALL_BIN) ./files/vti.sh $(1)/lib/netifd/proto/vti.sh
+endef
+
+define Package/vtiv4/install
+	:
+endef
+
+define Package/vtiv6/install
+	:
 endef
 
 $(eval $(call BuildPackage,vti))

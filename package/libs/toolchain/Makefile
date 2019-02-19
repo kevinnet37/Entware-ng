@@ -8,13 +8,14 @@
 
 include $(TOPDIR)/rules.mk
 PKG_NAME:=toolchain
-PKG_RELEASE:=3
 
-ifeq ($(CONFIG_USE_GLIBC),y)
-        PKG_RELEASE=4
+ifeq ($(CONFIG_USE_UCLIBC),y)
+  PKG_RELEASE:=1
+else
+  PKG_RELEASE:=6
 endif
 
-PKG_MAINTAINER:=Felix Fietkau <nbd@openwrt.org>
+PKG_MAINTAINER:=Felix Fietkau <nbd@nbd.name>
 PKG_LICENSE:=GPL-3.0-with-GCC-exception
 
 include $(INCLUDE_DIR)/package.mk
@@ -36,6 +37,13 @@ endef
 define Package/locales
 $(call Package/gcc/Default)
   TITLE:=Locales support (independent of system lib)
+  VERSION:=$(LIBC_VERSION)-$(PKG_RELEASE)
+  DEPENDS:=@USE_GLIBC
+endef
+
+define Package/gconv-modules
+$(call Package/gcc/Default)
+  TITLE:=Glibc gconv modules
   VERSION:=$(LIBC_VERSION)-$(PKG_RELEASE)
   DEPENDS:=@USE_GLIBC
 endef
@@ -240,7 +248,7 @@ define Package/libc/config
 		string
 		prompt "libc shared library files (use wildcards)"
 		depends on EXTERNAL_TOOLCHAIN && PACKAGE_libc
-		default "./lib/ld{-*.so,-linux*.so.*} ./lib/lib{anl,c,cidn,crypt,dl,m,nsl,nss_dns,nss_files,resolv,util}{-*.so,.so.*}"
+		default "./lib/ld{*.so*,-linux*.so.*} ./lib/lib{anl,c,cidn,crypt,dl,m,nsl,nss_dns,nss_files,resolv,util}{-*.so,.so.*}"
 
 	endmenu
 endef
@@ -423,73 +431,19 @@ endef
 LIBGCC_A=$(lastword $(wildcard $(TOOLCHAIN_DIR)/lib/gcc/*/*/libgcc_pic.a))
 LIBGCC_MAP=$(lastword $(wildcard $(TOOLCHAIN_DIR)/lib/gcc/*/*/libgcc.map))
 LIBGCC_SO=$(lastword $(wildcard $(TOOLCHAIN_DIR)/lib/libgcc_s.so.*))
-ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
-  ifneq ($(if $(CONFIG_USE_UCLIBC),$(CONFIG_GCC_VERSION_LINARO)),)
-    BUILD_LIBGCC:=$(if $(CONFIG_m68k)$(CONFIG_powerpc),,$(PKG_BUILD_DIR)/libgcc_s.so.*)
-  endif
-endif
 
-ifneq ($(BUILD_LIBGCC),)
-  define Build/Compile/uClibc
-	$(SCRIPT_DIR)/relink-lib.sh \
-		"$(TARGET_CROSS)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libc_so.a)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libc_so.a)" \
-		"$(patsubst $(TOOLCHAIN_DIR)/lib/%,$(PKG_BUILD_DIR)/%,$(wildcard $(TOOLCHAIN_DIR)/lib/libuClibc-*.so))" \
-		-Wl,-init,__uClibc_init -Wl,-soname=libc.so.0 \
-		$(BUILD_LIBGCC)
-	$(SCRIPT_DIR)/relink-lib.sh \
-		"$(TARGET_CROSS)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libcrypt-*.so)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libcrypt_pic.a)" \
-		"$(patsubst $(TOOLCHAIN_DIR)/lib/%,$(PKG_BUILD_DIR)/%,$(wildcard $(TOOLCHAIN_DIR)/lib/libcrypt-*.so))" \
-		$(BUILD_LIBGCC) \
-		-Wl,-soname=libcrypt.so.0
-	$(SCRIPT_DIR)/relink-lib.sh \
-		"$(TARGET_CROSS)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libatomic.so)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libatomic.a)" \
-		"$(patsubst $(TOOLCHAIN_DIR)/lib/%,$(PKG_BUILD_DIR)/%,$(wildcard $(TOOLCHAIN_DIR)/lib/libatomic*.so))" \
-		$(BUILD_LIBGCC) \
-		-Wl,-soname=libatomic.so.0
-	$(SCRIPT_DIR)/relink-lib.sh \
-		"$(TARGET_CROSS)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libm-*.so)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libm_pic.a)" \
-		"$(patsubst $(TOOLCHAIN_DIR)/lib/%,$(PKG_BUILD_DIR)/%,$(wildcard $(TOOLCHAIN_DIR)/lib/libm-*.so))" \
-		$(BUILD_LIBGCC) \
-		-Wl,-soname=libm.so.0
-	$(SCRIPT_DIR)/relink-lib.sh \
-		"$(TARGET_CROSS)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libpthread-*.so)" \
-		"$(wildcard $(TOOLCHAIN_DIR)/lib/libpthread_so.a)" \
-		"$(patsubst $(TOOLCHAIN_DIR)/lib/%,$(PKG_BUILD_DIR)/%,$(wildcard $(TOOLCHAIN_DIR)/lib/libpthread-*.so))" \
-		-Wl,-z,nodelete,-z,initfirst,-init=__pthread_initialize_minimal_internal \
-		-ldl -lc $(BUILD_LIBGCC) \
-		-Wl,-soname=libpthread.so.0
-  endef
-  define Build/Compile/libgcc
-	$(SCRIPT_DIR)/relink-lib.sh \
-		"$(TARGET_CROSS)" \
-		"$(LIBGCC_SO)" \
-		"$(LIBGCC_A)" \
-		"$(patsubst $(TOOLCHAIN_DIR)/lib/%,$(PKG_BUILD_DIR)/%,$(LIBGCC_SO))" \
-		-Wl,--version-script=$(LIBGCC_MAP) -Wl,-soname=libgcc_s.so.1
-  endef
-else
-  define Build/Compile/uClibc
+define Build/Compile/uClibc
 	$(CP) \
 		$(TOOLCHAIN_DIR)/lib/libuClibc-*.so \
 		$(TOOLCHAIN_DIR)/lib/libcrypt-*.so \
 		$(TOOLCHAIN_DIR)/lib/libm-*.so \
 		$(TOOLCHAIN_DIR)/lib/libpthread-*.so \
 		$(PKG_BUILD_DIR)/
-  endef
-  ifneq ($(LIBGCC_SO),)
+endef
+ifneq ($(LIBGCC_SO),)
     define Build/Compile/libgcc
 	$(CP) $(LIBGCC_SO) $(PKG_BUILD_DIR)/
     endef
-  endif
 endif
 
 define Build/Compile/Default
@@ -530,10 +484,6 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
 	$(CP) $(TOOLCHAIN_DIR)/lib/libstdc++.so.* $(1)/opt/lib/
   endef
 
-  use_libutil=$(if $(CONFIG_USE_GLIBC),libutil)
-  use_libnsl=$(if $(CONFIG_USE_GLIBC),libnsl)
-  use_nsswitch=$(if $(CONFIG_USE_GLIBC),libnss_dns libnss_files libnss_compat libnss_nisplus libnss_hesiod libnss_db libnss_nis)
-
   define Package/glibc/install
 	$(INSTALL_DIR) $(1)/opt/etc
 	$(CP) ./glibc-files/etc/* $(1)/opt/etc
@@ -544,7 +494,7 @@ ifeq ($(CONFIG_EXTERNAL_TOOLCHAIN),)
 		$(TOOLCHAIN_DIR)/lib/libmemusage.so \
 		$(TOOLCHAIN_DIR)/lib/libpcprofile.so \
 		$(1)/opt/lib/
-	for file in libanl libc libcidn libcrypt libdl libm $(use_libnsl) $(use_nsswitch) libresolv $(use_libutil); do \
+	for file in libanl libc libcidn libcrypt libdl libm libnsl libnss_dns libnss_files libresolv libutil; do \
 		for file in $(TOOLCHAIN_DIR)/lib/$$$$file.so.* $(TOOLCHAIN_DIR)/lib/$$$$file-$(LIBC_SO_VERSION).so; do \
 			if [ -e "$$$$file" ]; then \
 				$(CP) $$$$file $(1)/opt/lib/; \
@@ -612,10 +562,7 @@ endif
   ifneq ($(CONFIG_USE_MUSL),y)
 	$(CP) \
 		$(TOOLCHAIN_DIR)/lib/libpthread.so.* \
-		$(if $(BUILD_LIBGCC),\
-			$(PKG_BUILD_DIR)/libpthread-$(LIBC_SO_VERSION).so, \
-			$(TOOLCHAIN_DIR)/lib/libpthread-$(LIBC_SO_VERSION).so \
-		) \
+		$(TOOLCHAIN_DIR)/lib/libpthread-$(LIBC_SO_VERSION).so \
 		$(1)/opt/lib/
   endif
   endef
@@ -677,6 +624,11 @@ icharmaps=ANSI_X3.4-1968.gz UTF-8.gz
 		$(CP) $(TOOLCHAIN_DIR)/share/i18n/charmaps/$$$$file $(1)/opt/usr/share/i18n/charmaps ; \
 	done ; \
 	exit 0
+  endef
+
+  define Package/gconv-modules/install
+	$(INSTALL_DIR) $(1)/opt/lib/gconv
+	$(CP) $(TOOLCHAIN_DIR)/lib/gconv/* $(1)/opt/lib/gconv/
   endef
 
 else
@@ -826,3 +778,4 @@ $(eval $(call BuildPackage,libgo))
 $(eval $(call BuildPackage,ldd))
 $(eval $(call BuildPackage,ldconfig))
 $(eval $(call BuildPackage,locales))
+$(eval $(call BuildPackage,gconv-modules))

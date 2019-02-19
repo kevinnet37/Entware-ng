@@ -16,8 +16,8 @@ PKG_SOURCE_URL:= \
 	http://www.netfilter.org/projects/libnfnetlink/files/ \
 	ftp://ftp.netfilter.org/pub/libnfnetlink/ \
 	http://mirrors.evolva.ro/netfilter.org/libnfnetlink/
-PKG_MD5SUM:=98927583d2016a9fb1936fed992e2c5e
-PKG_MAINTAINER:=Jo-Philipp Wich <jow@openwrt.org>
+PKG_HASH:=f270e19de9127642d2a11589ef2ec97ef90a649a74f56cf9a96306b04817b51a
+PKG_MAINTAINER:=Jo-Philipp Wich <jo@mein.io>
 PKG_LICENSE:=GPL-2.0+
 
 PKG_FIXUP:=autoreconf
@@ -47,25 +47,25 @@ CONFIGURE_ARGS += \
 	--enable-shared
 
 define Build/InstallDev
-	$(INSTALL_DIR) $(1)/usr/include/libnfnetlink
+	$(INSTALL_DIR) $(1)/opt/include/libnfnetlink
 	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/include/libnfnetlink/{libnfnetlink,linux_nfnetlink,linux_nfnetlink_compat}.h \
-		$(1)/usr/include/libnfnetlink/
-	$(INSTALL_DIR) $(1)/usr/lib
+		$(PKG_INSTALL_DIR)/opt/include/libnfnetlink/{libnfnetlink,linux_nfnetlink,linux_nfnetlink_compat}.h \
+		$(1)/opt/include/libnfnetlink/
+	$(INSTALL_DIR) $(1)/opt/lib
 	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/libnfnetlink.{a,so*} \
-		$(1)/usr/lib/
-	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+		$(PKG_INSTALL_DIR)/opt/lib/libnfnetlink.{a,so*} \
+		$(1)/opt/lib/
+	$(INSTALL_DIR) $(1)/opt/lib/pkgconfig
 	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libnfnetlink.pc \
-		$(1)/usr/lib/pkgconfig/
+		$(PKG_INSTALL_DIR)/opt/lib/pkgconfig/libnfnetlink.pc \
+		$(1)/opt/lib/pkgconfig/
 endef
 
 define Package/libnfnetlink/install
-	$(INSTALL_DIR) $(1)/usr/lib
+	$(INSTALL_DIR) $(1)/opt/lib
 	$(CP) \
-		$(PKG_INSTALL_DIR)/usr/lib/libnfnetlink.so.* \
-		$(1)/usr/lib/
+		$(PKG_INSTALL_DIR)/opt/lib/libnfnetlink.so.* \
+		$(1)/opt/lib/
 endef
 
 $(eval $(call BuildPackage,libnfnetlink))
